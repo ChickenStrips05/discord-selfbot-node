@@ -1,5 +1,7 @@
 ## Simple Discord selfbot made with TypeScript
-Note: this code is not official nor does it follow the Discord Terms of Service. Use at your own risk and beware of your account being moderated or flagged.
+> [!WARNING]
+> This code is not official nor does it follow the Discord Terms of Service. Use at your own risk and beware of your account being moderated or flagged.
+> I am not responsible for any blocked accounts because of this code.
 
 The data structures are inspired by discord.js module.
 Huge thanks to the [Discord Userdoccers](https://github.com/discord-userdoccers) for reverse-engineering and creating some data structures that I used, [website](https://docs.discord.food/).
