@@ -7,7 +7,6 @@ export interface Clan {
     badge?: string
 }
 
-
 export interface PartialUser {
 	id: string
 	username: string
@@ -25,8 +24,6 @@ export interface PartialUser {
 	public_flags?: number
 }
 
-
-
 export interface MessageReference {
     channel_id: string,
     guild_id: string | null,
@@ -37,7 +34,6 @@ export interface ContentScanMetadata {
 	flags: number
 	version: number
 }
-
 
 export enum AllowedMention {
 	roles,
@@ -138,3 +134,44 @@ export interface PermissionOverwrite {
     allow: number
     deny: number
 }
+
+export interface Relationship {
+	id: string,
+	type: number,
+	user: PartialUser,
+	nickname?: string,
+	is_spam_request?: boolean,
+	stranger_request?: boolean,
+	user_ignored: boolean,
+	origin_application_id?: string,
+	since: string,
+	has_played_game: string 
+}
+
+export interface RoleColors {
+	primary_color: number
+	secondary_color: number | null
+	tertiary_color: number | null
+}
+
+export interface RoleUpdate {
+	name?: string | null
+	description?: string | null
+	colors?: RoleColors | null
+	hoist?: boolean | null
+	icon?:  string | null
+	unicode_emoji?: string | null
+	permissions?: string | null
+}
+
+export interface EmojiUpdate {
+	name?: string
+	roles?: string[]
+}
+
+export interface StickerUpdate {
+	name?: string
+	description?: string | null
+	tags?: string
+}
+

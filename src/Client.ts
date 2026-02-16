@@ -3,8 +3,13 @@ import EventEmitter from "./EventEmitter"
 import GuildTextChannel from "./api/GuildTextChannel"
 import Message from "./api/Message"
 import Rest from "./Rest"
-import { MessageSendOptions } from "./Types"
+import { EmojiUpdate, MessageSendOptions, Relationship, RoleUpdate, StickerUpdate } from "./Types"
 import { formatImgUrl } from "./Utils"
+import UserGuild from "./api/UserGuild"
+import Role from "./api/Role"
+import Guild from "./api/Guild"
+import Emoji from "./api/Emoji"
+import Sticker from "./api/Sticker"
 
 interface GuildSubscription {
     typing?: boolean,
@@ -101,7 +106,7 @@ export default class Client extends EventEmitter {
         return formatImgUrl(`https://cdn.discordapp.com/avatars/${this.id}/${this.avatar}`, format, size)
     }
 
-    async sendMessage(channelId: string, options: MessageSendOptions): Promise<Message | object> {
+    async sendMessage(channelId: string, options: MessageSendOptions): Promise<Message | never> {
         const res = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages`,
             {
                 method: "POST", headers: { "Authorization": this.token, "Content-Type": "application/json" },
@@ -112,43 +117,27 @@ export default class Client extends EventEmitter {
         const json = await res.json()
 
         if (!res.ok) {
-            console.error("Error sending message: ")
-            console.log(json)
-            return json
+            throw new Error(`Error sending message:\n${JSON.stringify(json)}`)
         }
 
         return new Message(json, this)
     }
 
-    async sendTypingIndicator(channelId: string): Promise<boolean> {
-        const res = await fetch(`https://discord.com/api/v9/channels/${channelId}/typing`,
-            {
-                method: "POST", headers: { "Authorization": this.token, "Content-Type": "application/json" },
-            }
-        )
+    async sendTypingIndicator(channelId: string): Promise<true | never> {
+        const res = await this.Rest.POST(`https://discord.com/api/v9/channels/${channelId}/typing`, null)
 
         if (!res.ok) {
-            const json = await res.json()
-            console.error("Error sending typing indicator: ")
-            console.log(json)
-            return false
+            throw new Error(`Error sending typing indicator in channel id: ${channelId}`)
         }
 
         return true
     }
 
-    async deleteMessage(channelId: string, id: string): Promise<boolean> {
-        const res = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages/${id}`,
-            {
-                method: "DELETE", headers: { "Authorization": this.token, "Content-Type": "application/json" },
-            }
-        )
+    async deleteMessage(channelId: string, messageId: string): Promise<boolean | never> {
+        const res = await this.Rest.DELETE(`https://discord.com/api/v9/channels/${channelId}/messages/${messageId}`)
 
         if (!res.ok) {
-            const json = await res.json()
-            console.error("Error deleteing message: ")
-            console.log(json)
-            return false
+            throw new Error(`Error deleting message: ${messageId} in ${channelId}`)
         }
 
         return true
@@ -174,11 +163,7 @@ export default class Client extends EventEmitter {
     }
 
     async getMessages(channelId: string, limit: number = 30): Promise<Message[]> {
-        const res = await fetch(`https://discord.com/api/v9/channels/${channelId}/messages?limit=${limit}`,
-            {
-                method: "GET", headers: { "Authorization": this.token, "Content-Type": "application/json" },
-            }
-        )
+        const res = await this.Rest.GET(`https://discord.com/api/v9/channels/${channelId}/messages?limit=${limit}`)
 
         const json = await res.json()
 
@@ -191,17 +176,17 @@ export default class Client extends EventEmitter {
         return json.map((message: Message) => (new Message(message, this)))
     }
 
-    async updateGuildSubscriptions(subscriptions: GuildSubscriptions): Promise<boolean|never> {
+    async updateGuildSubscriptions(subscriptions: GuildSubscriptions): Promise<boolean | never> {
         if (this.ready) {
             this.ws_connection.send(JSON.stringify({ op: 37, d: { subscriptions: subscriptions } }))
             return true
         } else {
             throw new Error("Client WS connection not ready yet!")
-            
+
         }
     }
 
-    async getAllUserChannels(): Promise<DMChannel[]|never> {
+    async getAllUserChannels(): Promise<DMChannel[] | never> {
         const res = await this.Rest.GET("https://discord.com/api/v9/users/@me/channels")
         const json = await res.json()
 
@@ -211,13 +196,13 @@ export default class Client extends EventEmitter {
 
         return json.map((channel: any) => (new DMChannel(channel, this)))
     }
-    
-    async getChannel(id: string): Promise<DMChannel|GuildTextChannel> {
-        const res = await this.Rest.GET(`https://discord.com/api/v9/channels/${id}`)
+
+    async getChannel(channelId: string): Promise<DMChannel | GuildTextChannel> {
+        const res = await this.Rest.GET(`https://discord.com/api/v9/channels/${channelId}`)
         const json = await res.json()
 
         if (!res.ok) {
-            throw new Error(`Error fetching channel data\n${JSON.stringify(json)}`)
+            throw new Error(`Error fetching channel: ${channelId}\n${JSON.stringify(json)}`)
         }
         if (json.type === 1 || json.type === 3) {
             return new DMChannel(json, this)
@@ -226,7 +211,104 @@ export default class Client extends EventEmitter {
         } else {
             throw new Error("Invalid/unsuported channel type")
         }
+    }
 
-        
+    async getUserRelationships(): Promise<Relationship[]> {
+        const res = await this.Rest.GET(`https://discord.com/api/v9/users/@me/relationships`)
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error fetching relationships\n${JSON.stringify(json)}`)
+        }
+
+        return json
+    }
+
+    async getUserGuilds(): Promise<UserGuild[] | never> {
+        const res = await this.Rest.GET("https://discord.com/api/v9/users/@me/guilds")
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error fetching user channels\n${JSON.stringify(json)}`)
+        }
+
+        return json.map((guild: any) => (new UserGuild(guild, this)))
+    }
+
+    async getGuild(guildId: string, withCounts: boolean = true): Promise<Guild> {
+        const res = await this.Rest.GET(`https://discord.com/api/v9/guilds/${guildId}${withCounts ? "?with_counts=true" : null}`)
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error updating role\n${JSON.stringify(json)}`)
+        }
+
+        return new Guild(json, this)
+    }
+
+    async updateRole(guildId: string, roleId: string, data: RoleUpdate): Promise<Role | never> {
+        const res = await this.Rest.PATCH(`https://discord.com/api/v9/guilds/${guildId}/roles/${roleId}`, JSON.stringify(data))
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error updating role\n${JSON.stringify(json)}`)
+        }
+
+        return new Role(json, this, guildId)
+    }
+
+    async deleteRole(guildId: string, roleId: string): Promise<true | never> {
+        const res = await this.Rest.DELETE(`https://discord.com/api/v9/guilds/${guildId}/roles/${roleId}`)
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error deleting role\n${JSON.stringify(json)}`)
+        }
+
+        return true
+    }
+
+    async updateEmoji(guildId: string, emojiId: string, data: EmojiUpdate): Promise<Emoji | never> {
+        const res = await this.Rest.PATCH(`https://discord.com/api/v9/guilds/${guildId}/emojis/${emojiId}`, JSON.stringify(data))
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error updating emoji\n${JSON.stringify(json)}`)
+        }
+
+        return new Emoji(json, this, guildId)
+    }
+
+    async deleteEmoji(guildId: string, emojiId: string): Promise<true | never> {
+        const res = await this.Rest.DELETE(`https://discord.com/api/v9/guilds/${guildId}/emojis/${emojiId}`)
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error deleting emoji\n${JSON.stringify(json)}`)
+        }
+
+        return true
+    }
+
+    async updateSticker(guildId: string, stickerId: string, data: StickerUpdate): Promise<Sticker | never> {
+        const res = await this.Rest.PATCH(`https://discord.com/api/v9/guilds/${guildId}/stickers/${stickerId}`, JSON.stringify(data))
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error updating sticker\n${JSON.stringify(json)}`)
+        }
+
+        return new Sticker(json, this)
+    }
+
+    async deleteSticker(guildId: string, stickerId: string): Promise<true | never> {
+        const res = await this.Rest.DELETE(`https://discord.com/api/v9/guilds/${guildId}/stickers/${stickerId}`)
+        const json = await res.json()
+
+        if (!res.ok) {
+            throw new Error(`Error deleting sticker\n${JSON.stringify(json)}`)
+        }
+
+        return true
     }
 }

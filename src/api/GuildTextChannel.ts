@@ -41,8 +41,8 @@ export default class GuildTextChannel{
         })
     }
 
-    send(options: MessageSendOptions) {
-        this.client.sendMessage(this.id, options)
+    async send(options: MessageSendOptions): Promise<Message> {
+        return await this.client.sendMessage(this.id, options)
     }
 
     async getMessages(limit: number = 30): Promise<Message[]> {

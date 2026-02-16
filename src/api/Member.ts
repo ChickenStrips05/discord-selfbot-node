@@ -7,7 +7,6 @@ import { formatImgUrl } from "../Utils"
 export default class Member {
     client: Client
     id: string
-    username: string
     user: User | null
     nick: string
     roles: string[]
@@ -25,9 +24,8 @@ export default class Member {
         this.client = client
 
         this.id = data.id
-        this.username = data.username
-        this.user = data?.user ? new User(data.user, client) : null
         this.nick = data.nick
+        this.user = data?.user ? new User(data.user, client) : null
         this.roles = data.roles
         this.premiumSince = data.premium_since
         this.pending = data.pending

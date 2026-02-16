@@ -41,7 +41,7 @@ interface MessageActivity {
     name_override?: string;
     icon_override?: string;
 }
-interface Emoji {
+interface Emoji$1 {
     id: string | null;
     name: string;
     roles?: string[];
@@ -57,7 +57,7 @@ interface PollAnswer {
 }
 interface PollMedia {
     text?: string;
-    emoji?: Emoji;
+    emoji?: Emoji$1;
 }
 interface PollCreate {
     question: PollMedia;
@@ -118,6 +118,41 @@ interface PermissionOverwrite {
     allow: number;
     deny: number;
 }
+interface Relationship {
+    id: string;
+    type: number;
+    user: PartialUser;
+    nickname?: string;
+    is_spam_request?: boolean;
+    stranger_request?: boolean;
+    user_ignored: boolean;
+    origin_application_id?: string;
+    since: string;
+    has_played_game: string;
+}
+interface RoleColors {
+    primary_color: number;
+    secondary_color: number | null;
+    tertiary_color: number | null;
+}
+interface RoleUpdate {
+    name?: string | null;
+    description?: string | null;
+    colors?: RoleColors | null;
+    hoist?: boolean | null;
+    icon?: string | null;
+    unicode_emoji?: string | null;
+    permissions?: string | null;
+}
+interface EmojiUpdate {
+    name?: string;
+    roles?: string[];
+}
+interface StickerUpdate {
+    name?: string;
+    description?: string | null;
+    tags?: string;
+}
 
 declare class User {
     client: Client;
@@ -163,7 +198,7 @@ declare class Message {
     constructor(data: any, client: Client);
     delete(): Promise<boolean>;
     edit(content: string): Promise<object | Message>;
-    reply(content: string): Promise<object | Message>;
+    reply(content: string): Promise<Message>;
 }
 
 declare class DMChannel {
@@ -210,7 +245,7 @@ declare class GuildTextChannel {
     permissionOverwrites: PermissionOverwrite[];
     nsfw: boolean;
     constructor(data: any, client: Client);
-    send(options: MessageSendOptions): void;
+    send(options: MessageSendOptions): Promise<Message>;
     getMessages(limit?: number): Promise<Message[]>;
 }
 
@@ -219,6 +254,131 @@ declare class Rest {
     constructor(token: string);
     GET(url: string): Promise<Response>;
     POST(url: string, body: any): Promise<Response>;
+    DELETE(url: string): Promise<Response>;
+    PATCH(url: string, body: any): Promise<Response>;
+}
+
+declare class Emoji {
+    client: Client;
+    guildId: string;
+    id: string;
+    name: string;
+    roles?: string[];
+    user?: User | null;
+    requireColons?: boolean;
+    managed?: boolean;
+    animated?: boolean;
+    available?: boolean;
+    constructor(data: any, client: Client, guildId: string);
+    update(options: EmojiUpdate): Promise<Emoji | never>;
+    delete(): Promise<true | never>;
+}
+
+declare class Role {
+    client: Client;
+    guildId: string;
+    id: string;
+    name: string;
+    description: string | null;
+    colors: RoleColors;
+    hoist: boolean;
+    icon: string;
+    unicodeEmoji?: string;
+    position: number;
+    permissions: string;
+    managed: boolean;
+    mentionable: boolean;
+    flags?: number;
+    tags?: number;
+    constructor(data: any, client: Client, guildId: string);
+    update(options: RoleUpdate): Promise<Role | never>;
+    delete(): Promise<true | never>;
+    iconUrl(format?: string | null, size?: number | null): string;
+}
+
+declare class Sticker {
+    client: Client;
+    guildId: string;
+    id: string;
+    packId?: string;
+    name: string;
+    description: string;
+    tags: string;
+    type: number;
+    formatType: number;
+    available?: boolean;
+    user?: User | null;
+    sortValue: number;
+    constructor(data: any, client: Client);
+    update(options: StickerUpdate): Promise<Sticker | never>;
+    delete(): Promise<true | never>;
+}
+
+declare class Guild {
+    client: Client;
+    id: string;
+    name: string;
+    icon: string | null;
+    banner: string | null;
+    homeHeader: string | null;
+    splash: string | null;
+    discoverySplash: string | null;
+    ownerId: string;
+    description: string;
+    afkChannelId: string;
+    widgetEnabled?: boolean;
+    widgetChannelId?: string;
+    verificationLevel: number;
+    defaultMessageNotifications: number;
+    explicitContentFilter: number;
+    features: string[];
+    roles: Role[];
+    emojis: Emoji[];
+    stickers: Sticker[];
+    mfaLevel: number;
+    systemChannelId: string;
+    systemChannelFlags: number;
+    rulesChannelId: string;
+    publicUpdatesChannelId: string;
+    safetyAlertsChannelId: string;
+    maxPresences?: number;
+    maxMembers?: number;
+    vanityUrlCode: string;
+    premiumTier: number;
+    premiumSubscriptionCount: number;
+    preferredLocale: string;
+    maxVideoChannelUsers?: number;
+    maxStageVideoChannelUsers?: number;
+    nsfwLevel: number;
+    ownerConfiguredContentLevel: number;
+    hubType: number;
+    premiumProgressBarEnabled: boolean;
+    latestOnboardingQuestionId: string;
+    approximateMemberCount?: number;
+    approximatePressenceCount?: number;
+    constructor(data: any, client: Client);
+    iconUrl(format?: string | null, size?: number | null): string;
+    bannerUrl(format?: string | null, size?: number | null): string;
+    homeHeaderUrl(format?: string | null, size?: number | null): string;
+    splashUrl(format?: string | null, size?: number | null): string;
+    discoverySplashUrl(format?: string | null, size?: number | null): string;
+}
+
+declare class UserGuild {
+    client: Client;
+    id: string;
+    name: string;
+    icon: string;
+    banner: string;
+    owner: boolean;
+    features: string[];
+    permissions: string;
+    approximateMemberCount: number | null;
+    approximatePresenceCount: number | null;
+    constructor(data: any, client: Client);
+    get(): Promise<Guild>;
+    iconUrl(format?: string | null, size?: number | null): string;
+    bannerUrl(format?: string | null, size?: number | null): string;
 }
 
 interface GuildSubscription {
@@ -249,20 +409,28 @@ declare class Client extends EventEmitter {
     Rest: Rest;
     constructor(token: string | any, debug?: boolean);
     avatarUrl(format?: string, size?: number): string;
-    sendMessage(channelId: string, options: MessageSendOptions): Promise<Message | object>;
-    sendTypingIndicator(channelId: string): Promise<boolean>;
-    deleteMessage(channelId: string, id: string): Promise<boolean>;
+    sendMessage(channelId: string, options: MessageSendOptions): Promise<Message | never>;
+    sendTypingIndicator(channelId: string): Promise<true | never>;
+    deleteMessage(channelId: string, messageId: string): Promise<boolean | never>;
     updateMessage(channelId: string, id: string, content: string): Promise<Message | object>;
     getMessages(channelId: string, limit?: number): Promise<Message[]>;
     updateGuildSubscriptions(subscriptions: GuildSubscriptions): Promise<boolean | never>;
     getAllUserChannels(): Promise<DMChannel[] | never>;
-    getChannel(id: string): Promise<DMChannel | GuildTextChannel>;
+    getChannel(channelId: string): Promise<DMChannel | GuildTextChannel>;
+    getUserRelationships(): Promise<Relationship[]>;
+    getUserGuilds(): Promise<UserGuild[] | never>;
+    getGuild(guildId: string, withCounts?: boolean): Promise<Guild>;
+    updateRole(guildId: string, roleId: string, data: RoleUpdate): Promise<Role | never>;
+    deleteRole(guildId: string, roleId: string): Promise<true | never>;
+    updateEmoji(guildId: string, emojiId: string, data: EmojiUpdate): Promise<Emoji | never>;
+    deleteEmoji(guildId: string, emojiId: string): Promise<true | never>;
+    updateSticker(guildId: string, stickerId: string, data: StickerUpdate): Promise<Sticker | never>;
+    deleteSticker(guildId: string, stickerId: string): Promise<true | never>;
 }
 
 declare class Member {
     client: Client;
     id: string;
-    username: string;
     user: User | null;
     nick: string;
     roles: string[];
@@ -281,4 +449,4 @@ declare class Member {
 
 declare function formatImgUrl(base: string, format: string | null, size: number | null): string;
 
-export { AllowedMention, type Attachment, type Clan, Client, type ContentScanMetadata, DMChannel, type Emoji, EventEmitter, GuildTextChannel, Member, Message, type MessageActivity, type MessageReference, type MessageSendOptions, type PartialUser, type PermissionOverwrite, type PollAnswer, type PollCreate, type PollMedia, Rest, User, formatImgUrl };
+export { AllowedMention, type Attachment, type Clan, Client, type ContentScanMetadata, DMChannel, type Emoji$1 as Emoji, type EmojiUpdate, EventEmitter, GuildTextChannel, Member, Message, type MessageActivity, type MessageReference, type MessageSendOptions, type PartialUser, type PermissionOverwrite, type PollAnswer, type PollCreate, type PollMedia, type Relationship, Rest, type RoleColors, type RoleUpdate, type StickerUpdate, User, formatImgUrl };

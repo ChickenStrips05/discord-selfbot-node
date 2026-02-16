@@ -11,4 +11,12 @@ export default class Rest {
     async POST(url: string, body: any): Promise<Response> {
         return await fetch(url, {method: "POST", headers: {"Authorization": this.token}, body: body})
     }
+
+    async DELETE(url: string): Promise<Response> {
+        return await fetch(url, {method: "DELETE", headers: {"Authorization": this.token}})
+    }
+
+    async PATCH(url: string, body: any): Promise<Response> {
+        return await fetch(url, {method: "PATCH", headers: {"Authorization": this.token}, body: body})
+    }
 }
